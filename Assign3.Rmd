@@ -1,0 +1,193 @@
+---
+title: 'Assignment #3'
+author: "Chelsea Woodruff"
+date: "2/4/2019"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("~/quant-methods")
+treedata <- read.csv("https://raw.githubusercontent.com/dmcglinn/quant_methods/gh-pages/data/treedata.csv")
+library(car)
+```
+```{r}
+library(ggplot2)
+library(gridExtra)
+library(scatterplot3d)
+library(MASS)
+```
+
+1.) To compare the variables stream distribution, elevation, topographic convergence index (tci), disturbance, and beers against cover in the Frasier Fir and Red Maple, respectively:
+```{r}
+trees_abi <- subset(treedata, treedata$spcode == 'ABIEFRA')
+trees_ace <- subset(treedata, treedata$spcode == 'ACERRUB')
+
+fir_big_lm <- lm(cover ~ streamdist + elev + tci + disturb + beers, data = trees_abi)
+maple_big_lm <- lm(cover ~ streamdist + elev + tci + disturb + beers, data = trees_ace)
+```
+```{r}
+summary(fir_big_lm)
+```
+The table indicates that elevation, the topographic convergent index, and beers are all statistically significant in explaining coverage of the Frasier Fir tree. The p-values are all <0.05, indicating statistical significance.
+
+Below, we will plot a few variables to see their individual effects on Frasier Fir coverage.
+
+```{r}
+cover_streamdist <- ggplot(data = trees_abi, 
+             mapping = aes(x = streamdist, y = cover)) + 
+      geom_point() + 
+      geom_smooth(method = 'lm') + 
+      labs(x = 'Stream Distance', y = 'Cover')
+
+cover_streamdist
+
+```
+Above is the level coverage of the Frasier Fir tree in relation to distance from the closest stream water source. This is a linear model showing a line of best fit over the data points. Here we see the difficulty of plotting points with data sets containing a discrete variable (cover). While this variable of stream distance did not necessarily indicate statistical significance in the table above, below we can find the p-value to be 0.000456. 
+```{r}
+summary(lm(cover ~ streamdist, data = trees_abi))
+```
+
+```{r}
+abi_cover_elev <- ggplot(data = trees_abi, 
+             mapping = aes(x = elev, y = cover)) + 
+      geom_point() + 
+      geom_smooth(method = 'lm') + 
+      labs(x = 'Elevation', y = 'Cover')
+
+abi_cover_elev
+
+```
+Here is a line of best fit placed over data explaining the relationship that variable elevation might have on the coverage of the Frasier Fir. By "squint test" we can see the line of best fit is slightly closer. But below, we have calculated the R-squared value to be 0.29. The p-value of 3.122e-09 shows a statistically significant relationship between elevation and tree cover in the Frasier Fir, as was suggested by the first table.
+```{r}
+summary(lm(cover ~ elev, data = trees_abi))
+```
+```{r}
+abi_cover_tci <- ggplot(data = trees_abi, 
+             mapping = aes(x = tci, y = cover)) + 
+      geom_point() + 
+      geom_smooth(method = 'lm') + 
+      labs(x = 'Topographic Convergence Index', y = 'Cover')
+
+abi_cover_tci
+```
+The above plot is a good example of why examining large data sets by plotting is always helpful. Here we see a potential outlier on the far end of the plotted data. Might have been hard to catch without graphing. This also violates an OLS assumption of no error or outliers existing within the independent variable. 
+```{r}
+summary(lm(cover ~ tci, data = trees_abi))
+```
+Above is the tabular data of the individual TCI variable likely to explain coverage in the Frasier Fir. But here, the p-value does not indicate any statistical significance, as it did in the first table. This may be because of interaction between the variables. Below is a linear model assuming an all-interaction effect between the variables:
+```{r}
+abi_int_mod <- lm(cover ~ elev * tci * streamdist * disturb * beers, data=trees_abi)
+summary(abi_int_mod)
+```
+To explain the variation of the p-values from being run individually or jointly, we must assume these explanatory variables are not entirely independent from one another. Above is the result if we assume an all interaction model. By first glance, we can assume this is not a useful model.
+
+To test the variables individual interaction upon one another, we use the 'pairs' function below:
+```{r}
+pairs(~ elev +tci +streamdist + beers, data = trees_abi)
+```
+```{r}
+lm(cover ~ elev + tci + streamdist + beers + elev:tci + elev:streamdist + elev:beers + tci:streamdist + tci:beers + streamdist:beers + elev:tci:streamdist:beers, data = trees_abi)
+```
+By using the information we have found from all the models and tables above, we can begin to create a more accurate model for our data.
+```{r}
+new_abi_lm <- lm(cover ~ tci + elev + beers, data = trees_abi)
+summary(new_abi_lm)
+```
+The above model indicates that the rate of tree coverage in the Frasier Fir is dependent on the TCI, elevation, and beers. These variables are the most important when predicting the natural rate of coverage.
+
+Below we can view the summary of our next data set, the Red Maple.
+```{r}
+summary(maple_big_lm)
+```
+The model indicates that stream distribution, elevation, and beers are all statistically significant in explaining coverage of the Red Maple.
+
+But, this is is assuming no interaction is happening between the variables.
+Again, we will use the 'pairs' function to analyze the variables for interaction between each other. 
+
+```{r}
+pairs(~ elev+tci+streamdist+beers, data=trees_ace)
+```
+```{r}
+lm(cover ~ elev + tci + streamdist + beers + elev:tci + elev:streamdist + elev:beers + tci:streamdist + tci:beers + streamdist:beers + elev:tci:streamdist:beers, data = trees_ace)
+```
+```{r}
+new_ace_lm <- lm(cover ~ tci + elev + streamdist + beers, data = trees_ace)
+summary(new_ace_lm)
+```
+The above model indicates that the rate of tree coverage in the Red Maple is dependent on the TCI, elevation, stream distance, and beers. These variables are the most important when predicting the natural rate of coverage.
+
+OLS assumptions were checked between models and tables across both species. Linearity between coverage and independent variables was prevalent. Few errors or outliers were seen within independent variables with some exception, for example, to the elevation variable on coverage for the Frasier Fir species. Error around the regression line, or homoscedasticity, was difficult to measure by "squint test" but likely non-problematic in this case. Direction and magnitude of error between variables is likely seen between variables that exhibit interaction, as these do.
+
+Differences in variance between the species can most likely be explained via the difference in the dataset size between species, as the Red Maple has more collected data points.
+
+2.) Compare your qualitative assessment of which variables were most important in each model. Does it appear that changing the error distribution changed the results much? In what ways?
+```{r}
+acer_poi = glm(cover ~ tci + elev + streamdist + disturb + beers, data = trees_ace, family='poisson')
+abi_poi = glm(cover ~ tci + elev + streamdist + disturb + beers, data = trees_abi, family='poisson')
+```
+```{r}
+pseudo_r2 = function(glm_mod) {1 - glm_mod$deviance / glm_mod$null.deviance}
+pseudo_r2(abi_poi)
+#0.4603601
+pseudo_r2(acer_poi)
+#0.03385888
+```
+summary(fir_big_lm)
+Multiple R-squared:  0.4455,	Adjusted R-squared:  0.4042 
+ p-value: 6.482e-10
+
+summary(maple_big_lm)
+Multiple R-squared:  0.03802,	Adjusted R-squared:  0.02945 
+ p-value: 7.48e-05
+
+Here we are providing the error term instead of asking the function to compute for us.The R-squared values were near identical with the change in error distribution. By predicting and then telling the R-squared value, the function ran almost the same as it had when we had asked it to compute that term for us, with minor differences.
+
+3.) Provide a plain English summary (i.e., no statistics) of what you have found and what conclusions we can take away from your analysis?
+
+When first analyzing a large dataset such as this one, it is important to get a general understanding of any relationship between variables. By experimenting with creating model and isolating independent variables in relation to the dependent, we can begin to see relationships. Running an ANOVA was key to pinpointing any statistical significance within the variables. But this was done assuming no interaction was taking effect by the variables. Because of this, the next step was to run a pairs analysis in order to visually view any interaction between variables. This allowed us to narrow down our focus of variables to just the statistically important few. The created models from there indicate that stream distribution, elevation, and beers are all statistically significant in explaining coverage of the Red Maple. And the additional model indicates that the rate of tree coverage in the Red Maple is dependent on the TCI, elevation, stream distance, and beers. These variables are the most important when predicting the natural rate of coverage. This might be important when trying to predict changes to the species' when changing the independent variables. For example, climate change might alter stream distances in the Smokey Mountains and scientists will want to predict the effect this might have on the Red Maple.
+
+4.) (optional) Examine the behavior of the function stepAIC() using the exploratory models developed above. This is a very simple and not very robust machine learning stepwise algorithm that uses AIC to select a best model. By default it does a backward selection routine.
+
+#abi_step <- stepAIC(abi_poi, trace = FALSE)
+#View(abi_step)
+#abi_step$anova
+Stepwise Model Path 
+Analysis of Deviance Table
+
+Initial Model:
+cover ~ tci + elev + streamdist + disturb + beers
+
+Final Model:
+cover ~ tci + elev + beers
+
+
+          Step Df  Deviance Resid. Df Resid. Dev      AIC
+1                                  94   53.32828 407.8549
+2    - disturb  3 0.9748869        97   54.30317 402.8298
+3 - streamdist  1 0.6848549        98   54.98802 401.5146
+
+Here the function has eliminated variables it deemed unfit for the analysis.
+
+
+#acer_step <- stepAIC(acer_poi, trace = FALSE)
+#acer_step$anova
+Stepwise Model Path 
+Analysis of Deviance Table
+
+Initial Model:
+cover ~ tci + elev + streamdist + disturb + beers
+
+Final Model:
+cover ~ tci + elev + streamdist + beers
+
+
+       Step Df Deviance Resid. Df Resid. Dev      AIC
+1                             786   697.0335 3422.127
+2 - disturb  3 1.742863       789   698.7764 3417.870
+
+Both species’ models in this case decided to includ TCI, elevation, and beers. The other variables were deemed insignificant for the model.
+
+5.) (optional) Develop a model for the number of species in each site (i.e., unique plotID). This variable will also be discrete so the Poisson may be a good starting approximation. Side note: the Poisson distribution converges asymptotically on the Gaussian distribution as the mean of the distribution increases. Thus Poisson regression does not differ much from traditional OLS when means are large.

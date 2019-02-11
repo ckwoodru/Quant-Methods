@@ -1,0 +1,55 @@
+---
+title: "Assignment 4 - Multivariate Models"
+author: "Chelsea Woodruff"
+date: "2/7/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r, include = FALSE}
+library(vegan)
+data(dune)
+data(dune.env)
+dune_mds = metaMDS(dune)
+```
+```{r}
+plot(dune_mds, type='n')
+ text(dune_mds, 'sp', cex=.5)
+ # generate vector of colors 
+ color_vect = rev(terrain.colors(6))[-1]
+ points(dune_mds, 'sites', pch=19, 
+        col=color_vect[dune.env$Moisture])
+ legend('topright', paste("Moisture =", 1:5, sep=''), 
+        col=color_vect, pch=19)
+```
+The axes are applied for explained variance. Firstly, the species abundance is plotted by name. Those in clusters are more abundant and those that are more rare are a farther distance from the clusters (note Airaprae, Empenigr, and Hyporadi near the top). 
+Sites that are different are further apart. Vice versa, those that are similar are closer together.
+Moisture values are then plotted over that, and they fall over some clusters of species. 
+The goal of creating a plot like this is to gain a first-impression visual sense if moisture is related to species site differences. 
+By first glance, there is a relationship with moisture related to the similaries or differences of sites.
+```{r}
+plot(cca(dune, dune.env))
+plot(cca(dune, dune.env$Moisture))
+plot(cca(dune ~ dune.env$Moisture))
+cca_dune = cca(dune ~ ., data=dune.env)
+RsquareAdj(cca_dune, 100)
+```
+```{r}
+anova(cca_dune, permutations=999)
+```
+
+```{r}
+anova(cca_dune, by = "margin", permutations=999)
+```
+
+```{r}
+cca(formula = dune ~ Moisture, data = dune.env)
+```
+
+```{r}
+cca(formula = dune ~ Moisture + Management + Manure, data = dune.env)
+```
+
+*In the first plot, the take home message appears to be that Management and Moisture had affect on the dispersal of the variety of dune vegetation species, due to the variance. In the last plot, the quadratic function of moisture seemingly has the highest explained variance among the functions. This isn't much different from the first plot but it much easier to interpret by eliminating the other variable functions.*

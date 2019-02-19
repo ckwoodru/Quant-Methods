@@ -1,0 +1,69 @@
+---
+title: "Assignment 5 - Spacial Modeling"
+author: "Chelsea Woodruff"
+date: "2/12/2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+library(vegan)
+library(nlme)
+data(BCI)
+## UTM Coordinates (in metres)
+BCI_xy = data.frame(x = rep(seq(625754, 626654, by=100), each=5), 
+                    y = rep(seq(1011569,  1011969, by=100), len=50))
+```
+1) Examine if there is evidence of spatial dependence in a rare and a common species in the BCI tree dataset
+```{r}
+sr = apply(BCI, 1, function(x) sum(x > 0))
+col_brks = hist(sr, plot=F)$breaks
+col_indices = as.numeric(cut(sr, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI_xy, cex=2, pch=19, col=cols[col_indices])
+```
+Above, we have plotted the data points to see if spacial dependence is occurring.
+```{r}
+col_brks = hist(sr, plot=F)$breaks
+col_indices = as.numeric(cut(sr, col_brks))
+cols = rev(terrain.colors(length(col_brks)))
+plot(BCI$Zuelania.guidonia,BCI$Alseis.blackiana, cex=2, pch=19, col=cols[col_indices])
+```
+Above, we have plotted the data of two species, one rare and one abundant. This is done to gain a better understanding if spacial dependence is occurring.
+
+2) Build two generalized linear models to predict the abundance of the species Drypetes standleyi using the abundance of other tree species in the study site. Specifically examine the following species as predictor variables:
+```{r}
+sp_ids = c("Cordia.lasiocalyx", "Hirtella.triandra",
+           "Picramnia.latifolia", "Quassia.amara",
+           "Tabernaemontana.arborea", "Trattinnickia.aspera", 
+           "Xylopia.macrantha")
+```
+
+```{r}
+sp_a = BCI$Drypetes.standleyi
+sp_b = BCI$Cordia.lasiocalyx
+linearmodel1 <- lm(sp_b ~ sp_a, data=BCI)
+summary(linearmodel1)
+```
+```{r}
+x <- BCI_xy$x
+y <- BCI_xy$y
+var_lm_01 = gls(Drypetes.standleyi ~ Cordia.lasiocalyx, data = BCI)
+summary(var_lm_01)
+```
+
+```{r}
+var_lm_01 <- update(var_lm_01, corr=corExp(form = ~ x + y))
+```
+```{r}
+sp_c = BCI$Hirtella.triandra
+sp_d = BCI$Picramnia.latifolia
+sp_e = BCI$Quassia.amara
+sp_f = BCI$Tabernaemontana.arborea
+sp_g = BCI$Trattinnickia.aspera
+sp_h = BCI$Xylopia.macrantha
+#var_lm_02 = gls(sp_a ~ sp_b, sp_c, sp_d, sp_e, sp_f, sp_g, sp_h, data = BCI)
+```
+
